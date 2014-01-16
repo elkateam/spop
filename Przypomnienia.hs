@@ -15,12 +15,103 @@ Dawid Góralczyk
 £ukasz WoŸniak
 
 -}
+plikZwydarzeniami = "wydarzenia.txt"
+-- dane o wydarzeniu
+data Wydarzenie = Wydarzenie {
+	wydarzenieId            :: Int, 	-- id wydarzenia
+	nazwa               	:: String,	-- nazwa wydarzenia
+	dataWydarzenia          :: Day, -- data wydarzenia
+	godzinaWydarzenia		:: Int,	-- godzina wydarzenia
+	cykl                    :: Int,	-- cykl rezerwacji	1-jednorazowy, 2-codziennie, 3-tydzien, 4-miesiac, 5-rok
+	zrealizowane			:: Bool
+} deriving (Show, Read, Eq)
+
+-- Zwraca id wydarzenia
+getWydarzenieID :: Wydarzenie -> Int
+getWydarzenieID (Wydarzenie {wydarzenieId=id}) = id
+
+-- Zwraca nowe, wolne ID wydarzenia
+nastepneWydarzenieID :: [Wydarzenie] -> Int -> Int
+nastepneWydarzenieID [] newID = newID
+nastepneWydarzenieID (x:xs) newID =
+	if (getWydarzenieID x >= newID) then
+		nastepneWydarzenieID xs ((getWydarzenieID x)+1)
+	else
+		nastepneWydarzenieID xs newID
+		
+-- zapisz wydarzenia do pliku
+zapiszWydarzenia wydarzenia = do
+	writeFile plikZwydarzeniami (show wydarzenia)
+
+-- wczytaj zadania z pliku
+wczytajPlik = do
+	hFile <- openFile plikZwydarzeniami ReadMode
+	fileStr <- hGetContents hFile
+	let wydarzenia = (read fileStr) :: [Wydarzenie]
+	putStrLn ("Wczytano zadan: " ++ (show (length wydarzenia)))
+	hClose hFile
+	return wydarzenia
 
 
+-- sprawdza, czy data jest w formacie YYYY-MM-DD
+czyData :: String -> Bool
+czyData "" = False
+czyData date = 
+	if ((length date) /= 10) then
+	False
+	else
+	sprawdzDateString date (length date)
 
+-- funkcja pomocnicza do sprawdzenia daty
+sprawdzDateString :: String -> Int -> Bool
+sprawdzDateString [x] 1
+	| isDigit x == True = True
+	| otherwise = False
+sprawdzDateString (x:xs) ind
+	| (ind == 3 || ind == 6) && (x == '-') = sprawdzDateString xs (ind-1)
+	| (ind == 3 || ind == 6) && (x /= '-') = False
+	| isDigit x == True = sprawdzDateString xs (ind-1)
+	| otherwise = False
 
+-- sprawdzanie, czy napis jest liczba
+czyLiczba :: String -> Bool
+czyLiczba "" = False
+czyLiczba [x] =
+	if isDigit x == True then
+	True
+	else
+	False
+czyLiczba (x:xs) = 
+	if (isDigit x == True) then
+	czyLiczba xs
+	else
+	False
+
+	
+-- sprawdzanie, czy napis jest liczba
+czyCykl :: String -> Bool
+czyCykl "" = False
+czyCykl cykl
+	| cykl=="1" || cykl=="2" || cykl=="3" || cykl=="4" || cykl=="5" = True
+	| otherwise = False
+
+	
+utworzPlikWydarzen = do
+	catch   (do 
+		putStrLn ("Sprawdzanie " ++ plikZwydarzeniami)
+		plik <- readFile plikZwydarzeniami
+		return ()
+		) errorHandler
+	where errorHandler e = 
+		if isDoesNotExistError e then do
+			putStrLn ("Tworzenie pliku: " ++ plikZwydarzeniami)
+			writeFile plikZwydarzeniami (show ([] :: [Wydarzenie]))
+			else 
+			putStrLn ("Blad przy otwieraniu pliku: " ++ plikZwydarzeniami)	
+	
 -- uruchomienie programu
 main = do
+	utworzPlikWydarzen 
 	menuLoop
 
 -- Menu glowne - pokazuje ogolne opcje programu.
@@ -44,7 +135,44 @@ menuLoop = do
 
 -- Dodawanie zadania
 utworzZadanie = do
-	putStrLn "Dodawanie zadania"
+	putStrLn "Dodaj wydarzenie"
+	putStr "Podaj nazwe wydarzenia: "
+	nazwaWyd <- getLine
+	putStr "Podaj date wydarzenia (YYYY-MM-DD): "
+	dataWydarzeniaStr <- getLine
+	if czyData dataWydarzeniaStr then do
+		let dataWyd = (readTime defaultTimeLocale "%F" dataWydarzeniaStr) :: Day
+		putStr "Podaj godzine wydarzenia: "
+		godzinaWydarzeniaStr <- getLine
+		if czyLiczba godzinaWydarzeniaStr then do
+			let godzinaWyd = (read godzinaWydarzeniaStr ) :: Int
+			putStrLn "Wybierz cykl wydarzenia: "
+			putStrLn "1  Wydarzenie jednorazowe"
+			putStrLn "2  Cykl dzienny"
+			putStrLn "3  Cykl tygodniowy"
+			putStrLn "4  Cykl miesieczny"
+			putStrLn "5  Cykl roczny"
+			cyklStr <- getLine
+			if czyCykl cyklStr then do
+				let cyklWyd = (read cyklStr ) :: Int
+				wydarzenia <- wczytajPlik
+				let noweWydarzenie = Wydarzenie{
+					wydarzenieId=nastepneWydarzenieID wydarzenia 1,
+					nazwa=nazwaWyd,
+					dataWydarzenia = dataWyd,
+					godzinaWydarzenia = godzinaWyd,
+					cykl = cyklWyd,
+					zrealizowane = False
+				}
+				zapiszWydarzenia (wydarzenia ++ [noweWydarzenie])
+				putStrLn "\nRezerwacja zapisana.\n"
+			else
+				putStr "\nNiepoprawny cykl\n"
+		else
+			putStr "\nNiepoprawna godzina wydarzenia!!!!!!!!!!!!!!!!!!!!!!\n"
+	else 
+		putStrLn "\nData jest nieprawidlowa !!!!!!!!!!!!!!\n"
+	
 
 -- Przegl¹danie zadañ
 przegladajZadania = do
