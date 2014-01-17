@@ -22,8 +22,13 @@ data Wydarzenie = Wydarzenie {
 	nazwa               	:: String,	-- nazwa wydarzenia
 	dataWydarzenia          :: Day, -- data wydarzenia
 	godzinaWydarzenia		:: Int,	-- godzina wydarzenia
-	cykl                    :: Int,	-- cykl rezerwacji	1-jednorazowy, 2-codziennie, 3-tydzien, 4-miesiac, 5-rok
-	zrealizowane			:: Bool
+	cykl                    :: Int	-- cykl rezerwacji	1-jednorazowy, 2-codziennie, 3-tydzien, 4-miesiac, 5-rok
+} deriving (Show, Read, Eq)
+
+-- realizacja zadan (w przypadku zadan jednorazowych maksymalnie jedna dla kazdego zadania, w przeciwnym wypadku wiecej
+data Realizacja = Realizacja {
+	realizacjaId            :: Int, 	-- id realizacji
+	fkWydarzenie			:: Int		-- klucz obcy - wydarzenie
 } deriving (Show, Read, Eq)
 
 -- Zwraca id wydarzenia
@@ -51,6 +56,33 @@ wczytajPlik = do
 	putStrLn ("Wczytano zadan: " ++ (show (length wydarzenia)))
 	hClose hFile
 	return wydarzenia
+
+--zamien cykl na napis
+cyklNapis :: Int -> String
+cyklNapis x 
+	| x==1 = "wydarzenie jednorazowe"
+	| x==2 = "kazdego dnia"
+	| x==3 = "co tydzien"
+	| x==4 = "co miesiac"
+	| x==5 = "co rok"
+	| otherwise = ""
+	
+-- zamien liste zadañ na napis
+zadaniaNapis :: [Wydarzenie] -> String
+zadaniaNapis [] = ""
+zadaniaNapis (x:xs) = (zadanieNapis x) ++ zadaniaNapis xs
+
+-- zamien zadanie na napis
+zadanieNapis :: Wydarzenie -> String
+zadanieNapis (Wydarzenie {
+	wydarzenieId=wydarzenieId, 
+	nazwa=nazwa,
+	dataWydarzenia=dataWydarzenia, 
+	godzinaWydarzenia=godzinaWydarzenia,
+	cykl=cykl}) = 
+	"Wydarzenie " ++ show wydarzenieId ++ ": " ++ (show nazwa) 
+		++ "    Dzien: " ++ (show dataWydarzenia) ++ " Godzina: " ++ (show godzinaWydarzenia) ++ ":00\n"
+		++ "    Cykl: " ++ (cyklNapis cykl) ++ "\n"
 
 
 -- sprawdza, czy data jest w formacie YYYY-MM-DD
@@ -161,8 +193,7 @@ utworzZadanie = do
 					nazwa=nazwaWyd,
 					dataWydarzenia = dataWyd,
 					godzinaWydarzenia = godzinaWyd,
-					cykl = cyklWyd,
-					zrealizowane = False
+					cykl = cyklWyd
 				}
 				zapiszWydarzenia (wydarzenia ++ [noweWydarzenie])
 				putStrLn "\nRezerwacja zapisana.\n"
@@ -199,7 +230,10 @@ przegladajZadania = do
 			
 -- Wyœwietlanie wszystkich zadañ
 wszystkieZadania = do
-	putStrLn "Wszystkie zadania"
+	putStrLn "Wszystkie zadania: "
+	zadania <- wczytajPlik
+	putStrLn (zadaniaNapis zadania)
+	
 
 -- Wyœwietlanie zadañ do zrealizowania dzisiaj
 zadaniaDzis = do
