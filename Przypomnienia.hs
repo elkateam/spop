@@ -56,6 +56,14 @@ nastepneWydarzenieID (x:xs) newID =
 	else
 		nastepneWydarzenieID xs newID
 
+--zwraca nastepny termin wydarzenia
+nastepnyTermin :: Day -> Int -> Day
+nastepnyTermin dzien cykl
+	| cykl==2 = addDays 1 dzien
+	| cykl==3 = addDays 7 dzien
+	| cykl==4 = addGregorianMonthsClip 1 dzien
+	| cykl==5 = addGregorianYearsClip 1 dzien
+
 -- zapisz wydarzenia do pliku
 zapiszWydarzenia wydarzenia = do
 	writeFile plikZwydarzeniami (show wydarzenia)
@@ -193,7 +201,18 @@ realizujZadanie (x:xs) [Wydarzenie {
 				godzinaWydarzenia=godzinaWydarzenia,
 				cykl=cykl,
 				zrealizowane=True}
-			xs ++ [noweWydarzenie]
+			if (cykl==1) then
+				xs ++ [noweWydarzenie]
+			else do
+				let stareWydarzenie = Wydarzenie {
+					wydarzenieId=nastepneWydarzenieID (x:xs) 1,  
+					nazwa=nazwa,
+					dataWydarzenia=nastepnyTermin dataWydarzenia cykl, 
+					godzinaWydarzenia=godzinaWydarzenia,
+					cykl=cykl,
+					zrealizowane=False}
+				xs ++ [noweWydarzenie] ++ [stareWydarzenie]
+			
 		else
 			[x] ++ realizujZadanie xs (getWydarzenie xs wydarzenieId)
 
@@ -370,7 +389,7 @@ realizujWydarzenie = do
 	if czyLiczba id_zadania then do
 		let zadanieID = (read id_zadania) :: Int
 		let zadanie = getWydarzenie zadania zadanieID 
-		if zadanie /= [] then do -- && getZrealizowane zadanie then do
+		if (zadanie /= [] && not(getZrealizowane (head zadanie))) then do
 			zapiszWydarzenia(realizujZadanie zadania zadanie)
 			putStrLn "test"
 		else
