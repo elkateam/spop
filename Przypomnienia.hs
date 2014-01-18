@@ -85,7 +85,7 @@ zadanieNapis (Wydarzenie {
 	godzinaWydarzenia=godzinaWydarzenia,
 	cykl=cykl}) = 
 	"Wydarzenie " ++ show wydarzenieId ++ ": " ++ (show nazwa) ++ "\n" 
-		++  "Dzien: " ++ (show dataWydarzenia) ++ " Godzina: " ++ (show godzinaWydarzenia) ++ ":00\n"
+		++  "Dzien: " ++ (show dataWydarzenia) ++ " Godzina: " ++ (show godzinaWydarzenia) ++ "\n"
 		++ "Cykl: " ++ (cyklNapis cykl) ++ "\n"
 
 
@@ -108,6 +108,14 @@ sprawdzDateString (x:xs) ind
 	| (ind == 3 || ind == 6) && (x /= '-') = False
 	| isDigit x == True = sprawdzDateString xs (ind-1)
 	| otherwise = False
+
+czyGodzina :: String -> Bool
+czyGodzina "" = False
+czyGodzina time =
+	if ((length time) /= 5) then
+	False
+	else
+	sprawdzGodzineString time (length time)
 
 -- sprawdzanie godziny
 sprawdzGodzineString :: String -> Int -> Bool
@@ -134,15 +142,6 @@ czyLiczba (x:xs) =
 	else
 	False
 
-czyGodzina :: String -> Bool
-czyGodzina "" = False
-czyGodzina time =
-	if ((length time) /= 5) then
-		False
-	else
-		sprawdzGodzineString time (length time)
-
-	
 -- sprawdzanie, czy napis jest poprawnym cyklem
 czyCykl :: String -> Bool
 czyCykl "" = False
@@ -213,7 +212,7 @@ utworzZadanie = do
 		putStr "Podaj godzine wydarzenia (hh:mm): "
 		godzinaWydarzeniaStr <- getLine
 		if czyGodzina godzinaWydarzeniaStr then do
-			let godzinaWyd = (read godzinaWydarzeniaStr ) :: String
+			let godzinaWyd = godzinaWydarzeniaStr
 			putStrLn "Wybierz cykl wydarzenia: "
 			putStrLn "1  Wydarzenie jednorazowe"
 			putStrLn "2  Cykl dzienny"
