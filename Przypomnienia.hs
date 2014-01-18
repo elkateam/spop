@@ -22,18 +22,22 @@ data Wydarzenie = Wydarzenie {
 	nazwa               	:: String,	-- nazwa wydarzenia
 	dataWydarzenia          :: Day, -- data wydarzenia
 	godzinaWydarzenia		:: Int,	-- godzina wydarzenia
-	cykl                    :: Int	-- cykl rezerwacji	1-jednorazowy, 2-codziennie, 3-tydzien, 4-miesiac, 5-rok
-} deriving (Show, Read, Eq)
-
--- realizacja zadan (w przypadku zadan jednorazowych maksymalnie jedna dla kazdego zadania, w przeciwnym wypadku wiecej
-data Realizacja = Realizacja {
-	realizacjaId            :: Int, 	-- id realizacji
-	fkWydarzenie			:: Int		-- klucz obcy - wydarzenie
+	cykl                    :: Int,	-- cykl rezerwacji	1-jednorazowy, 2-codziennie, 3-tydzien, 4-miesiac, 5-rok
+	zrealizowane			:: Bool  -- 1-zadanie zrealizowane, 0-niezrealizowane
 } deriving (Show, Read, Eq)
 
 -- Zwraca id wydarzenia
 getWydarzenieID :: Wydarzenie -> Int
 getWydarzenieID (Wydarzenie {wydarzenieId=id}) = id
+
+-- Zwraca wydarzenie o podanym ID
+getWydarzenie :: [Wydarzenie] -> Int -> [Wydarzenie]
+getWydarzenie [] id = []
+getWydarzenie (x:xs) id =
+	if (getWydarzenieID x == id) then
+		[x]
+	else
+		(getWydarzenie xs id)
 
 -- Zwraca nowe, wolne ID wydarzenia
 nastepneWydarzenieID :: [Wydarzenie] -> Int -> Int
@@ -43,7 +47,7 @@ nastepneWydarzenieID (x:xs) newID =
 		nastepneWydarzenieID xs ((getWydarzenieID x)+1)
 	else
 		nastepneWydarzenieID xs newID
-		
+
 -- zapisz wydarzenia do pliku
 zapiszWydarzenia wydarzenia = do
 	writeFile plikZwydarzeniami (show wydarzenia)
@@ -53,7 +57,6 @@ wczytajPlik = do
 	hFile <- openFile plikZwydarzeniami ReadMode
 	fileStr <- hGetContents hFile
 	let wydarzenia = (read fileStr) :: [Wydarzenie]
-	putStrLn ("Wczytano zadan: " ++ (show (length wydarzenia)))
 	hClose hFile
 	return wydarzenia
 
@@ -120,12 +123,22 @@ czyLiczba (x:xs) =
 	False
 
 	
--- sprawdzanie, czy napis jest liczba
+-- sprawdzanie, czy napis jest poprawnym cyklem
 czyCykl :: String -> Bool
 czyCykl "" = False
 czyCykl cykl
 	| cykl=="1" || cykl=="2" || cykl=="3" || cykl=="4" || cykl=="5" = True
 	| otherwise = False
+
+--usuwanie zadania:
+usunZadanie :: [Wydarzenie] -> Int -> [Wydarzenie]
+usunZadanie [] id = []
+usunZadanie [zadanie] id =
+	if (getWydarzenieID zadanie) == id then
+		[]
+	else
+		[zadanie]
+usunZadanie (s:reszta) id = (usunZadanie [s] id) ++ (usunZadanie reszta id)
 
 	
 utworzPlikWydarzen = do
@@ -144,15 +157,17 @@ utworzPlikWydarzen = do
 -- uruchomienie programu
 main = do
 	utworzPlikWydarzen 
+	let a = "test";
 	menuLoop
 
 -- Menu glowne - pokazuje ogolne opcje programu.
 menuLoop :: IO()
-menuLoop = do 
+menuLoop  = do 
 	putStrLn "***** P R Z Y P O M N I E N I A *****"
 	putStrLn "Menu glowne"
 	putStrLn "1  Utworz zadanie"
-	putStrLn "2  Przegladaj zadania"
+	putStrLn "2  Zarzadzanie zadaniami"
+	putStrLn "3  Wprowadz dzisiejsza date"
 	putStrLn "0  Wyjscie"
 	cmd <- getLine
 	case cmd of
@@ -160,6 +175,7 @@ menuLoop = do
 			utworzZadanie
 			menuLoop
 		"2" -> do przegladajZadania
+		--"3" -> do wprowadzDate ""
 		"0" -> do putStrLn "Koniec."
 		_ -> do
 			putStrLn "Nieprawidlowy wybor"
@@ -193,7 +209,8 @@ utworzZadanie = do
 					nazwa=nazwaWyd,
 					dataWydarzenia = dataWyd,
 					godzinaWydarzenia = godzinaWyd,
-					cykl = cyklWyd
+					cykl = cyklWyd,
+					zrealizowane = False
 				}
 				zapiszWydarzenia (wydarzenia ++ [noweWydarzenie])
 				putStrLn "\nRezerwacja zapisana.\n"
@@ -216,7 +233,6 @@ przegladajZadania = do
 	case cmd of
 		"1" -> do 
 			wszystkieZadania
-			przegladajZadania
 		"2" -> do 
 			zadaniaDzis
 			przegladajZadania
@@ -233,8 +249,32 @@ wszystkieZadania = do
 	putStrLn "Wszystkie zadania: "
 	zadania <- wczytajPlik
 	putStrLn (zadaniaNapis zadania)
+	putStrLn "1  Usun zadanie"
+	putStrLn "2  Oznacz zadanie jako zrealizowane"
+	putStrLn "0  Powrot"
+	cmd <- getLine
+	case cmd of
+		"1" -> do 
+			usunWydarzenie
+			przegladajZadania
+		"2" -> do 
+			zadaniaDzis
+			przegladajZadania
+		"0" -> do
+			przegladajZadania
+		_ -> do
+			putStrLn "Nieprawidlowy wybor"
+			wszystkieZadania
 	
-
+usunWydarzenie = do
+	zadania <- wczytajPlik
+	putStrLn "Podaj numer zadania do usuniecia"
+	id_zadania <- getLine
+	if czyLiczba id_zadania then do
+		let zadanieID = (read id_zadania) :: Int
+		zapiszWydarzenia(usunZadanie zadania zadanieID)
+	else
+		putStrLn "Niepoprawny numer stolika"
 -- Wyœwietlanie zadañ do zrealizowania dzisiaj
 zadaniaDzis = do
 	putStrLn "Zadania do zrealizowania w dniu dzisiejszym"
