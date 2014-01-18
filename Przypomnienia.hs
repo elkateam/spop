@@ -21,7 +21,7 @@ data Wydarzenie = Wydarzenie {
 	wydarzenieId            :: Int, 	-- id wydarzenia
 	nazwa               	:: String,	-- nazwa wydarzenia
 	dataWydarzenia          :: Day, -- data wydarzenia
-	godzinaWydarzenia		:: Int,	-- godzina wydarzenia
+	godzinaWydarzenia		:: String,	-- godzina wydarzenia
 	cykl                    :: Int,	-- cykl rezerwacji	1-jednorazowy, 2-codziennie, 3-tydzien, 4-miesiac, 5-rok
 	zrealizowane			:: Bool  -- 1-zadanie zrealizowane, 0-niezrealizowane
 } deriving (Show, Read, Eq)
@@ -57,6 +57,7 @@ wczytajPlik = do
 	hFile <- openFile plikZwydarzeniami ReadMode
 	fileStr <- hGetContents hFile
 	let wydarzenia = (read fileStr) :: [Wydarzenie]
+	putStrLn ("Wczytano zadan: " ++ (show (length wydarzenia)) ++ "\n")
 	hClose hFile
 	return wydarzenia
 
@@ -83,9 +84,9 @@ zadanieNapis (Wydarzenie {
 	dataWydarzenia=dataWydarzenia, 
 	godzinaWydarzenia=godzinaWydarzenia,
 	cykl=cykl}) = 
-	"Wydarzenie " ++ show wydarzenieId ++ ": " ++ (show nazwa) 
-		++ "    Dzien: " ++ (show dataWydarzenia) ++ " Godzina: " ++ (show godzinaWydarzenia) ++ ":00\n"
-		++ "    Cykl: " ++ (cyklNapis cykl) ++ "\n"
+	"Wydarzenie " ++ show wydarzenieId ++ ": " ++ (show nazwa) ++ "\n" 
+		++  "Dzien: " ++ (show dataWydarzenia) ++ " Godzina: " ++ (show godzinaWydarzenia) ++ ":00\n"
+		++ "Cykl: " ++ (cyklNapis cykl) ++ "\n"
 
 
 -- sprawdza, czy data jest w formacie YYYY-MM-DD
@@ -108,6 +109,17 @@ sprawdzDateString (x:xs) ind
 	| isDigit x == True = sprawdzDateString xs (ind-1)
 	| otherwise = False
 
+-- sprawdzanie godziny
+sprawdzGodzineString :: String -> Int -> Bool
+sprawdzGodzineString [x] 1
+	| isDigit x == True = True
+	| otherwise = False
+sprawdzGodzineString (x:xs) ind
+	| (ind == 3) && (x == ':') = sprawdzGodzineString xs (ind-1)
+	| (ind == 3) && (x /= ':') = False
+	| isDigit x == True = sprawdzGodzineString xs (ind-1)
+	| otherwise = False
+
 -- sprawdzanie, czy napis jest liczba
 czyLiczba :: String -> Bool
 czyLiczba "" = False
@@ -121,6 +133,14 @@ czyLiczba (x:xs) =
 	czyLiczba xs
 	else
 	False
+
+czyGodzina :: String -> Bool
+czyGodzina "" = False
+czyGodzina time =
+	if ((length time) /= 5) then
+		False
+	else
+		sprawdzGodzineString time (length time)
 
 	
 -- sprawdzanie, czy napis jest poprawnym cyklem
@@ -190,10 +210,10 @@ utworzZadanie = do
 	dataWydarzeniaStr <- getLine
 	if czyData dataWydarzeniaStr then do
 		let dataWyd = (readTime defaultTimeLocale "%F" dataWydarzeniaStr) :: Day
-		putStr "Podaj godzine wydarzenia: "
+		putStr "Podaj godzine wydarzenia (hh:mm): "
 		godzinaWydarzeniaStr <- getLine
-		if czyLiczba godzinaWydarzeniaStr then do
-			let godzinaWyd = (read godzinaWydarzeniaStr ) :: Int
+		if czyGodzina godzinaWydarzeniaStr then do
+			let godzinaWyd = (read godzinaWydarzeniaStr ) :: String
 			putStrLn "Wybierz cykl wydarzenia: "
 			putStrLn "1  Wydarzenie jednorazowe"
 			putStrLn "2  Cykl dzienny"
