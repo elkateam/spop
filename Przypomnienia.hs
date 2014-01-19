@@ -128,9 +128,11 @@ sprawdzDateString [x] 1
 	| isDigit x == True = True
 	| otherwise = False
 sprawdzDateString (x:xs) ind
+	| (ind == 5) && isDigit x == True && x >= '0' && x <= '1' = sprawdzDateString xs (ind-1)
+	| (ind == 2) && isDigit x == True && x >= '0' && x <= '3' = sprawdzDateString xs (ind-1)
 	| (ind == 3 || ind == 6) && (x == '-') = sprawdzDateString xs (ind-1)
 	| (ind == 3 || ind == 6) && (x /= '-') = False
-	| isDigit x == True = sprawdzDateString xs (ind-1)
+	| (ind /= 5 && ind /= 2) && isDigit x == True = sprawdzDateString xs (ind-1)
 	| otherwise = False
 
 czyGodzina :: String -> Bool
@@ -144,12 +146,14 @@ czyGodzina time =
 -- sprawdzanie godziny
 sprawdzGodzineString :: String -> Int -> Bool
 sprawdzGodzineString [x] 1
-	| isDigit x == True = True
+	| isDigit x == True && x >= '0' && x <= '9' = True
 	| otherwise = False
 sprawdzGodzineString (x:xs) ind
+	| (ind == 5) && isDigit x == True && x >= '0' && x <= '2' = sprawdzGodzineString xs (ind-1)
+	| (ind == 4) && isDigit x == True = sprawdzGodzineString xs (ind-1)
 	| (ind == 3) && (x == ':') = sprawdzGodzineString xs (ind-1)
 	| (ind == 3) && (x /= ':') = False
-	| isDigit x == True = sprawdzGodzineString xs (ind-1)
+	| (ind == 2) && isDigit x == True  && x >= '0' && x <= '5' = sprawdzGodzineString xs (ind-1)
 	| otherwise = False
 
 -- sprawdzanie, czy napis jest liczba
@@ -269,6 +273,13 @@ pozostawNieZrealizowaneWydarzenia (x:xs)
 	| getZrealizowane x == False = [x] ++ pozostawNieZrealizowaneWydarzenia xs
 	| otherwise = usunZadanieBezID x ++ pozostawNieZrealizowaneWydarzenia xs
 
+pozostawPrzeszleWydarzenia :: [Wydarzenie] -> Day -> [Wydarzenie]
+pozostawPrzeszleWydarzenia [] dzis = []
+pozostawPrzeszleWydarzenia (x:xs) dzis
+	| getZrealizowane x == True || (diffDays dzis (getDataWydarzenie x)) > 0 = [x] ++ pozostawPrzeszleWydarzenia xs dzis
+	| getZrealizowane x == False && (diffDays dzis (getDataWydarzenie x)) < 0 = usunZadanieBezID x ++ pozostawPrzeszleWydarzenia xs dzis
+--	| otherwise =  pozostawPrzeszleWydarzenia xs dzis
+
 --uruchomienie programu
 main = do
 	utworzPlikWydarzen 
@@ -343,9 +354,10 @@ utworzZadanie = do
 przegladajZadania = do
 	putStrLn "Przegladanie zadan"
 	putStrLn "1  Wszystkie zadania"
-	putStrLn "2  Zadania do zrealizowania w dniu dzisiejszym"
+	putStrLn "2  Zadania do zrealizowania w dniu dzisiejszym (niezrealizowane z przeszlosci oraz te z dzisiejsza data)"
 	putStrLn "3  Zrealizowane zadania"
 	putStrLn "4  Usun wszystkie zrealizowane zadania"
+	putStrLn "5  Usun wszystkie zaplanowane zadania (niezrealizowane z data wieksza niz dzisiejsza)"
 	putStrLn "0  Menu glowne"
 	cmd <- getLine
 	case cmd of
@@ -359,6 +371,9 @@ przegladajZadania = do
 			przegladajZadania
 		"4" -> do
 			usunWszystkieZrealizowane
+			przegladajZadania
+		"5" -> do
+			usunWszystkieZaplanowane
 			przegladajZadania
 		"0" -> do menuLoop
 		_ -> do
@@ -446,6 +461,12 @@ usunWszystkieZrealizowane = do
 	putStrLn "Usuwanie wszystkich zadan zrealizowanych\n"
 	wydarzenia <- wczytajPlik
 	zapiszWydarzenia (pozostawNieZrealizowaneWydarzenia wydarzenia)
+	putStrLn "Poprawnie usunieto!\n"
+
+usunWszystkieZaplanowane = do
+	putStrLn "Usuwanie wszystkich zadan zaplanowanych\n"
+	wydarzenia <- wczytajPlik
+	zapiszWydarzenia (pozostawPrzeszleWydarzenia wydarzenia dzisiaj)
 	putStrLn "Poprawnie usunieto!\n"
 	
 setDzisiaj = do
