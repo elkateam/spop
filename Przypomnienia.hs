@@ -218,7 +218,6 @@ realizujZadanie (x:xs) [Wydarzenie {
 			
 		else
 			[x] ++ realizujZadanie xs (getWydarzenie xs wydarzenieId)
-
 	
 utworzPlikWydarzen = do
 	catch   (do 
@@ -378,10 +377,10 @@ wszystkieZadania = do
 	case cmd of
 		"1" -> do 
 			usunWydarzenie
-			przegladajZadania
+			wszystkieZadania
 		"2" -> do 
 			realizujWydarzenie
-			przegladajZadania
+			wszystkieZadania
 		"0" -> do
 			przegladajZadania
 		_ -> do
@@ -407,7 +406,6 @@ realizujWydarzenie = do
 		let zadanie = getWydarzenie zadania zadanieID 
 		if (zadanie /= [] && not(getZrealizowane (head zadanie))) then do
 			zapiszWydarzenia(realizujZadanie zadania zadanie)
-			putStrLn "test"
 		else
 			putStrLn "Brak zadania lub zostalo juz zrealizowane"
 	else
@@ -420,6 +418,23 @@ zadaniaDzis = do
 	putStrLn ("Dzisiejsza data: " ++ show (dzisiaj) ++ "\n")
 	wydarzenia <- wczytajPlik
 	putStrLn (getCurrentWydarzenia wydarzenia dzisiaj)
+	putStrLn "1  Usun zadanie"
+	putStrLn "2  Oznacz zadanie jako zrealizowane"
+	putStrLn "0  Powrot"
+	cmd <- getLine
+	case cmd of
+		"1" -> do 
+			usunWydarzenie
+			zadaniaDzis
+		"2" -> do 
+			realizujWydarzenie
+			zadaniaDzis
+		"0" -> do
+			wszystkieZadania
+		_ -> do
+			putStrLn "Nieprawidlowy wybor"
+			zadaniaDzis
+			
 
 -- Wyœwietlanie zadañ zrealizowanych
 zrealizowaneZadania = do
