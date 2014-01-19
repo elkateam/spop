@@ -108,9 +108,9 @@ zadanieNapis (Wydarzenie {
 	godzinaWydarzenia=godzinaWydarzenia,
 	cykl=cykl,
 	zrealizowane=zrealizowane}) = 
-	"Wydarzenie " ++ show wydarzenieId ++ ": " ++ (show nazwa) 
+	"\nWydarzenie " ++ show wydarzenieId ++ ": " ++ (show nazwa) 
 		++ "\n    Dzien: " ++ (show dataWydarzenia) ++ " Godzina: " ++ (show godzinaWydarzenia) ++ "\n"
-		++ "    Cykl: " ++ (cyklNapis cykl) ++ "    Zrealiziwane: " ++ (zrealizowaneNapis zrealizowane) ++ "\n"
+		++ "    Cykl: " ++ (cyklNapis cykl) ++ "\n" ++ "    Zrealizowane: " ++ (zrealizowaneNapis zrealizowane) ++ "\n"
 
 
 -- sprawdza, czy data jest w formacie YYYY-MM-DD
@@ -257,6 +257,15 @@ getCyklWydarzenie (Wydarzenie{cykl = cyklWyd}) = cyklWyd
 
 getDataWydarzenie :: Wydarzenie -> Day
 getDataWydarzenie (Wydarzenie{dataWydarzenia = dataWydarz}) = dataWydarz
+
+getZrealizowaneFromWydarzenie :: Wydarzenie -> Bool
+getZrealizowaneFromWydarzenie (Wydarzenie{zrealizowane = zreal}) = zreal
+
+getZrealizowaneWydarzenia :: [Wydarzenie] -> String
+getZrealizowaneWydarzenia [] = []
+getZrealizowaneWydarzenia (x:xs)
+	| getZrealizowaneFromWydarzenie x == True = (zadanieNapis x) ++ getZrealizowaneWydarzenia xs
+	| otherwise = getZrealizowaneWydarzenia xs
 	
 -- uruchomienie programu
 main = do
@@ -407,7 +416,9 @@ zadaniaDzis = do
 
 -- Wyœwietlanie zadañ zrealizowanych
 zrealizowaneZadania = do
-	putStrLn "Zadania zrealizowane"
+	putStrLn "Zadania zrealizowane\n"
+	wydarzenia <- wczytajPlik
+	putStrLn (getZrealizowaneWydarzenia wydarzenia)
 	
 setDzisiaj = do
 	putStr "Podaj date dzisiejsza (TEST) (YYYY-MM-DD): "
