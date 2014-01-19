@@ -26,7 +26,7 @@ data Wydarzenie = Wydarzenie {
 	nazwa               	:: String,	-- nazwa wydarzenia
 	dataWydarzenia          :: Day, -- data wydarzenia
 	godzinaWydarzenia		:: String,	-- godzina wydarzenia
-	cykl                    :: Int,	-- cykl rezerwacji	1-jednorazowy, 2-codziennie, 3-tydzien, 4-miesiac, 5-rok
+	cykl                    :: Int,	-- cykl zadania	1-jednorazowy, 2-codziennie, 3-tydzien, 4-miesiac, 5-rok
 	zrealizowane			:: Bool  -- 1-zadanie zrealizowane, 0-niezrealizowane
 } deriving (Show, Read, Eq)
 
@@ -109,7 +109,7 @@ zadanieNapis (Wydarzenie {
 	cykl=cykl,
 	zrealizowane=zrealizowane}) = 
 	"Wydarzenie " ++ show wydarzenieId ++ ": " ++ (show nazwa) 
-		++ "\n    Dzien: " ++ (show dataWydarzenia) ++ " Godzina: " ++ (show godzinaWydarzenia) ++ ":00\n"
+		++ "\n    Dzien: " ++ (show dataWydarzenia) ++ " Godzina: " ++ (show godzinaWydarzenia) ++ "\n"
 		++ "    Cykl: " ++ (cyklNapis cykl) ++ "    Zrealiziwane: " ++ (zrealizowaneNapis zrealizowane) ++ "\n"
 
 
@@ -319,7 +319,7 @@ utworzZadanie = do
 					zrealizowane = False
 				}
 				zapiszWydarzenia (wydarzenia ++ [noweWydarzenie])
-				putStrLn "\nRezerwacja zapisana.\n"
+				putStrLn "\nZadanie zapisane.\n"
 			else
 				putStr "\nNiepoprawny cykl wydarzenia.\n"
 		else
@@ -413,7 +413,7 @@ setDzisiaj = do
 	putStr "Podaj date dzisiejsza (TEST) (YYYY-MM-DD): "
 	dataDzisStr <- getLine
 	if czyData dataDzisStr then do
-		dzisiaj = (read dataDzisStr) :: Day
+		let dzisiaj = (read dataDzisStr) :: Day
 		putStrLn "Poprawnie ustalono date dzisiejsza"
 	else do
 		putStrLn "Wprowadzona data jest w zlym formacie"
