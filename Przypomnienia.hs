@@ -4,9 +4,11 @@ import System.IO
 import Data.Time
 import Data.List
 import Data.Char
+import Data.Time.Calendar
 import System.Locale
 import Control.Exception
 import System.IO.Error
+import System.IO.Unsafe
 
 
 {-
@@ -16,6 +18,8 @@ Dawid Góralczyk
 
 -}
 plikZwydarzeniami = "wydarzenia.txt"
+dzisiaj = getCurrentDay :: Day
+
 -- dane o wydarzeniu
 data Wydarzenie = Wydarzenie {
 	wydarzenieId            :: Int, 	-- id wydarzenia
@@ -84,7 +88,7 @@ zadanieNapis (Wydarzenie {
 	dataWydarzenia=dataWydarzenia, 
 	godzinaWydarzenia=godzinaWydarzenia,
 	cykl=cykl}) = 
-	"Wydarzenie " ++ show wydarzenieId ++ ": " ++ (show nazwa) ++ "\n" 
+	"\nWydarzenie " ++ show wydarzenieId ++ ": " ++ (show nazwa) ++ "\n" 
 		++  "Dzien: " ++ (show dataWydarzenia) ++ " Godzina: " ++ (show godzinaWydarzenia) ++ "\n"
 		++ "Cykl: " ++ (cyklNapis cykl) ++ "\n"
 
@@ -172,6 +176,34 @@ utworzPlikWydarzen = do
 			writeFile plikZwydarzeniami (show ([] :: [Wydarzenie]))
 			else 
 			putStrLn ("Blad przy otwieraniu pliku: " ++ plikZwydarzeniami)	
+
+getCurrentDay :: Day
+getCurrentDay = utctDay (unsafePerformIO getCurrentTime)
+
+getWydarzenieDataWydarzenia :: Wydarzenie -> String
+getWydarzenieDataWydarzenia (Wydarzenie{
+							wydarzenieId = wydId,
+							dataWydarzenia=dataWydarz}) = "Data wydarzenia " ++ show wydId ++ ": " ++ show dataWydarz ++ "\n"
+
+getDatyWydarzen :: [Wydarzenie] -> String
+getDatyWydarzen [] = []
+getDatyWydarzen (x:xs) = (getWydarzenieDataWydarzenia x) ++ getDatyWydarzen xs
+
+getCurrentWydarzenia :: [Wydarzenie] -> Day -> String
+getCurrentWydarzenia [] dzis = []
+getCurrentWydarzenia (x:xs) dzis
+	| getDataWydarzenie x == dzis = (zadanieNapis x) ++ getCurrentWydarzenia xs dzis
+	| getCyklWydarzenie x == 2 = (zadanieNapis x) ++ getCurrentWydarzenia xs dzis
+	| getCyklWydarzenie x == 3 && (diffDays dzis (getDataWydarzenie x)) `mod` 7 == 0 = (zadanieNapis x) ++ getCurrentWydarzenia xs dzis
+	| getCyklWydarzenie x == 4 && (diffDays dzis (getDataWydarzenie x)) `mod` 30 == 0 = (zadanieNapis x) ++ getCurrentWydarzenia xs dzis
+	| getCyklWydarzenie x == 5 && (diffDays dzis (getDataWydarzenie x)) `mod` 365 == 0 = (zadanieNapis x) ++ getCurrentWydarzenia xs dzis
+	| otherwise = getCurrentWydarzenia xs dzis
+
+getCyklWydarzenie :: Wydarzenie -> Int
+getCyklWydarzenie (Wydarzenie{cykl = cyklWyd}) = cyklWyd
+
+getDataWydarzenie :: Wydarzenie -> Day
+getDataWydarzenie (Wydarzenie{dataWydarzenia = dataWydarz}) = dataWydarz
 	
 -- uruchomienie programu
 main = do
@@ -181,7 +213,7 @@ main = do
 
 -- Menu glowne - pokazuje ogolne opcje programu.
 menuLoop :: IO()
-menuLoop  = do 
+menuLoop = do 
 	putStrLn "***** P R Z Y P O M N I E N I A *****"
 	putStrLn "Menu glowne"
 	putStrLn "1  Utworz zadanie"
@@ -194,7 +226,9 @@ menuLoop  = do
 			utworzZadanie
 			menuLoop
 		"2" -> do przegladajZadania
-		--"3" -> do wprowadzDate ""
+		"3" -> do 
+			setDzisiaj
+			menuLoop
 		"0" -> do putStrLn "Koniec."
 		_ -> do
 			putStrLn "Nieprawidlowy wybor"
@@ -234,11 +268,11 @@ utworzZadanie = do
 				zapiszWydarzenia (wydarzenia ++ [noweWydarzenie])
 				putStrLn "\nRezerwacja zapisana.\n"
 			else
-				putStr "\nNiepoprawny cykl\n"
+				putStr "\nNiepoprawny cykl wydarzenia.\n"
 		else
-			putStr "\nNiepoprawna godzina wydarzenia!!!!!!!!!!!!!!!!!!!!!!\n"
+			putStr "\nNiepoprawna godzina wydarzenia!\n"
 	else 
-		putStrLn "\nData jest nieprawidlowa !!!!!!!!!!!!!!\n"
+		putStrLn "\nData jest nieprawidlowa!\n"
 	
 
 -- Przegl¹danie zadañ
@@ -297,12 +331,22 @@ usunWydarzenie = do
 -- Wyœwietlanie zadañ do zrealizowania dzisiaj
 zadaniaDzis = do
 	putStrLn "Zadania do zrealizowania w dniu dzisiejszym"
-		
+	--let dzisiaj = getCurrentDay :: Day
+	putStrLn ("Dzisiejsza data: " ++ show (dzisiaj) ++ "\n")
+	wydarzenia <- wczytajPlik
+	putStrLn (getCurrentWydarzenia wydarzenia dzisiaj)
+
 -- Wyœwietlanie zadañ zrealizowanych
 zrealizowaneZadania = do
 	putStrLn "Zadania zrealizowane"
 	
-	
-
+setDzisiaj = do
+	putStr "Podaj date dzisiejsza (TEST) (YYYY-MM-DD): "
+	dataDzisStr <- getLine
+	if czyData dataDzisStr then do
+		dzisiaj = (read dataDzisStr) :: Day
+		putStrLn "Poprawnie ustalono date dzisiejsza"
+	else do
+		putStrLn "Wprowadzona data jest w zlym formacie"
 
 
