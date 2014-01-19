@@ -183,6 +183,9 @@ usunZadanie [zadanie] id =
 		[zadanie]
 usunZadanie (s:reszta) id = (usunZadanie [s] id) ++ (usunZadanie reszta id)
 
+usunZadanieBezID :: Wydarzenie -> [Wydarzenie]
+usunZadanieBezID zad = []
+
 --oznaczanie zadania jako zrealizowanego
 realizujZadanie :: [Wydarzenie] -> [Wydarzenie] -> [Wydarzenie]
 realizujZadanie [] zadanie = []
@@ -246,10 +249,7 @@ getCurrentWydarzenia :: [Wydarzenie] -> Day -> String
 getCurrentWydarzenia [] dzis = []
 getCurrentWydarzenia (x:xs) dzis
 	| getDataWydarzenie x == dzis = (zadanieNapis x) ++ getCurrentWydarzenia xs dzis
-	| getCyklWydarzenie x == 2 = (zadanieNapis x) ++ getCurrentWydarzenia xs dzis
-	| getCyklWydarzenie x == 3 && (diffDays dzis (getDataWydarzenie x)) `mod` 7 == 0 = (zadanieNapis x) ++ getCurrentWydarzenia xs dzis
-	| getCyklWydarzenie x == 4 && (diffDays dzis (getDataWydarzenie x)) `mod` 30 == 0 = (zadanieNapis x) ++ getCurrentWydarzenia xs dzis
-	| getCyklWydarzenie x == 5 && (diffDays dzis (getDataWydarzenie x)) `mod` 365 == 0 = (zadanieNapis x) ++ getCurrentWydarzenia xs dzis
+	| getZrealizowane x == False && (diffDays dzis (getDataWydarzenie x)) > 0 = (zadanieNapis x) ++ getCurrentWydarzenia xs dzis
 	| otherwise = getCurrentWydarzenia xs dzis
 
 getCyklWydarzenie :: Wydarzenie -> Int
@@ -258,19 +258,22 @@ getCyklWydarzenie (Wydarzenie{cykl = cyklWyd}) = cyklWyd
 getDataWydarzenie :: Wydarzenie -> Day
 getDataWydarzenie (Wydarzenie{dataWydarzenia = dataWydarz}) = dataWydarz
 
-getZrealizowaneFromWydarzenie :: Wydarzenie -> Bool
-getZrealizowaneFromWydarzenie (Wydarzenie{zrealizowane = zreal}) = zreal
-
 getZrealizowaneWydarzenia :: [Wydarzenie] -> String
 getZrealizowaneWydarzenia [] = []
 getZrealizowaneWydarzenia (x:xs)
-	| getZrealizowaneFromWydarzenie x == True = (zadanieNapis x) ++ getZrealizowaneWydarzenia xs
+	| getZrealizowane x == True = (zadanieNapis x) ++ getZrealizowaneWydarzenia xs
 	| otherwise = getZrealizowaneWydarzenia xs
-	
--- uruchomienie programu
+
+pozostawNieZrealizowaneWydarzenia :: [Wydarzenie] -> [Wydarzenie]
+pozostawNieZrealizowaneWydarzenia [] = []
+pozostawNieZrealizowaneWydarzenia (x:xs)
+	| getZrealizowane x == False = [x] ++ pozostawNieZrealizowaneWydarzenia xs
+	| otherwise = usunZadanieBezID x ++ pozostawNieZrealizowaneWydarzenia xs
+
+--uruchomienie programu
 main = do
 	utworzPlikWydarzen 
-	let a = "test";
+	let a = "test"
 	menuLoop
 
 -- Menu glowne - pokazuje ogolne opcje programu.
@@ -343,6 +346,7 @@ przegladajZadania = do
 	putStrLn "1  Wszystkie zadania"
 	putStrLn "2  Zadania do zrealizowania w dniu dzisiejszym"
 	putStrLn "3  Zrealizowane zadania"
+	putStrLn "4  Usun wszystkie zrealizowane zadania"
 	putStrLn "0  Menu glowne"
 	cmd <- getLine
 	case cmd of
@@ -353,6 +357,9 @@ przegladajZadania = do
 			przegladajZadania
 		"3" -> do 
 			zrealizowaneZadania
+			przegladajZadania
+		"4" -> do
+			usunWszystkieZrealizowane
 			przegladajZadania
 		"0" -> do menuLoop
 		_ -> do
@@ -419,6 +426,12 @@ zrealizowaneZadania = do
 	putStrLn "Zadania zrealizowane\n"
 	wydarzenia <- wczytajPlik
 	putStrLn (getZrealizowaneWydarzenia wydarzenia)
+
+usunWszystkieZrealizowane = do
+	putStrLn "Usuwanie wszystkich zadan zrealizowanych\n"
+	wydarzenia <- wczytajPlik
+	zapiszWydarzenia (pozostawNieZrealizowaneWydarzenia wydarzenia)
+	putStrLn "Poprawnie usunieto!\n"
 	
 setDzisiaj = do
 	putStr "Podaj date dzisiejsza (TEST) (YYYY-MM-DD): "
