@@ -26,13 +26,17 @@ data Wydarzenie = Wydarzenie {
 	nazwa               	:: String,	-- nazwa wydarzenia
 	dataWydarzenia          :: Day, -- data wydarzenia
 	godzinaWydarzenia		:: String,	-- godzina wydarzenia
-	cykl                    :: Int,	-- cykl rezerwacji	1-jednorazowy, 2-codziennie, 3-tydzien, 4-miesiac, 5-rok
+	cykl                    :: Int,	-- cykl zadania	1-jednorazowy, 2-codziennie, 3-tydzien, 4-miesiac, 5-rok
 	zrealizowane			:: Bool  -- 1-zadanie zrealizowane, 0-niezrealizowane
 } deriving (Show, Read, Eq)
 
 -- Zwraca id wydarzenia
 getWydarzenieID :: Wydarzenie -> Int
 getWydarzenieID (Wydarzenie {wydarzenieId=id}) = id
+
+--zwraca zrealizowanie zadania
+getZrealizowane :: Wydarzenie -> Bool
+getZrealizowane (Wydarzenie {zrealizowane=zr}) = zr
 
 -- Zwraca wydarzenie o podanym ID
 getWydarzenie :: [Wydarzenie] -> Int -> [Wydarzenie]
@@ -52,6 +56,14 @@ nastepneWydarzenieID (x:xs) newID =
 	else
 		nastepneWydarzenieID xs newID
 
+--zwraca nastepny termin wydarzenia
+nastepnyTermin :: Day -> Int -> Day
+nastepnyTermin dzien cykl
+	| cykl==2 = addDays 1 dzien
+	| cykl==3 = addDays 7 dzien
+	| cykl==4 = addGregorianMonthsClip 1 dzien
+	| cykl==5 = addGregorianYearsClip 1 dzien
+
 -- zapisz wydarzenia do pliku
 zapiszWydarzenia wydarzenia = do
 	writeFile plikZwydarzeniami (show wydarzenia)
@@ -61,7 +73,7 @@ wczytajPlik = do
 	hFile <- openFile plikZwydarzeniami ReadMode
 	fileStr <- hGetContents hFile
 	let wydarzenia = (read fileStr) :: [Wydarzenie]
-	putStrLn ("Wczytano zadan: " ++ (show (length wydarzenia)) ++ "\n")
+	putStrLn ("Wczytano zadan: " ++ (show (length wydarzenia)))
 	hClose hFile
 	return wydarzenia
 
@@ -73,6 +85,13 @@ cyklNapis x
 	| x==3 = "co tydzien"
 	| x==4 = "co miesiac"
 	| x==5 = "co rok"
+	| otherwise = ""
+
+--wypisuje, czy zadanie jest zrealizowane
+zrealizowaneNapis :: Bool -> String
+zrealizowaneNapis x 
+	| x==False = "NIE"
+	| x==True = "TAK"
 	| otherwise = ""
 	
 -- zamien liste zadañ na napis
@@ -87,10 +106,11 @@ zadanieNapis (Wydarzenie {
 	nazwa=nazwa,
 	dataWydarzenia=dataWydarzenia, 
 	godzinaWydarzenia=godzinaWydarzenia,
-	cykl=cykl}) = 
-	"\nWydarzenie " ++ show wydarzenieId ++ ": " ++ (show nazwa) ++ "\n" 
-		++  "Dzien: " ++ (show dataWydarzenia) ++ " Godzina: " ++ (show godzinaWydarzenia) ++ "\n"
-		++ "Cykl: " ++ (cyklNapis cykl) ++ "\n"
+	cykl=cykl,
+	zrealizowane=zrealizowane}) = 
+	"Wydarzenie " ++ show wydarzenieId ++ ": " ++ (show nazwa) 
+		++ "\n    Dzien: " ++ (show dataWydarzenia) ++ " Godzina: " ++ (show godzinaWydarzenia) ++ "\n"
+		++ "    Cykl: " ++ (cyklNapis cykl) ++ "    Zrealiziwane: " ++ (zrealizowaneNapis zrealizowane) ++ "\n"
 
 
 -- sprawdza, czy data jest w formacie YYYY-MM-DD
@@ -162,6 +182,39 @@ usunZadanie [zadanie] id =
 	else
 		[zadanie]
 usunZadanie (s:reszta) id = (usunZadanie [s] id) ++ (usunZadanie reszta id)
+
+--oznaczanie zadania jako zrealizowanego
+realizujZadanie :: [Wydarzenie] -> [Wydarzenie] -> [Wydarzenie]
+realizujZadanie [] zadanie = []
+realizujZadanie (x:xs) [Wydarzenie {
+	wydarzenieId=wydarzenieId, 
+	nazwa=nazwa,
+	dataWydarzenia=dataWydarzenia, 
+	godzinaWydarzenia=godzinaWydarzenia,
+	cykl=cykl,
+	zrealizowane=zrealizowane}] = 
+		if (getWydarzenieID x == wydarzenieId) then do
+			let noweWydarzenie = Wydarzenie {
+				wydarzenieId=wydarzenieId, 
+				nazwa=nazwa,
+				dataWydarzenia=dataWydarzenia, 
+				godzinaWydarzenia=godzinaWydarzenia,
+				cykl=cykl,
+				zrealizowane=True}
+			if (cykl==1) then
+				xs ++ [noweWydarzenie]
+			else do
+				let stareWydarzenie = Wydarzenie {
+					wydarzenieId=nastepneWydarzenieID (x:xs) 1,  
+					nazwa=nazwa,
+					dataWydarzenia=nastepnyTermin dataWydarzenia cykl, 
+					godzinaWydarzenia=godzinaWydarzenia,
+					cykl=cykl,
+					zrealizowane=False}
+				xs ++ [noweWydarzenie] ++ [stareWydarzenie]
+			
+		else
+			[x] ++ realizujZadanie xs (getWydarzenie xs wydarzenieId)
 
 	
 utworzPlikWydarzen = do
@@ -266,7 +319,7 @@ utworzZadanie = do
 					zrealizowane = False
 				}
 				zapiszWydarzenia (wydarzenia ++ [noweWydarzenie])
-				putStrLn "\nRezerwacja zapisana.\n"
+				putStrLn "\nZadanie zapisane.\n"
 			else
 				putStr "\nNiepoprawny cykl wydarzenia.\n"
 		else
@@ -311,7 +364,7 @@ wszystkieZadania = do
 			usunWydarzenie
 			przegladajZadania
 		"2" -> do 
-			zadaniaDzis
+			realizujWydarzenie
 			przegladajZadania
 		"0" -> do
 			przegladajZadania
@@ -327,7 +380,23 @@ usunWydarzenie = do
 		let zadanieID = (read id_zadania) :: Int
 		zapiszWydarzenia(usunZadanie zadania zadanieID)
 	else
-		putStrLn "Niepoprawny numer stolika"
+		putStrLn "Niepoprawny numer zadania"
+		
+realizujWydarzenie = do
+	zadania <- wczytajPlik
+	putStrLn "Podaj numer zadania ktore chcesz oznaczyc jako zrealizowane"
+	id_zadania <- getLine
+	if czyLiczba id_zadania then do
+		let zadanieID = (read id_zadania) :: Int
+		let zadanie = getWydarzenie zadania zadanieID 
+		if (zadanie /= [] && not(getZrealizowane (head zadanie))) then do
+			zapiszWydarzenia(realizujZadanie zadania zadanie)
+			putStrLn "test"
+		else
+			putStrLn "Brak zadania lub zostalo juz zrealizowane"
+	else
+		putStrLn "Niepoprawny numer zadania"	
+	
 -- Wyœwietlanie zadañ do zrealizowania dzisiaj
 zadaniaDzis = do
 	putStrLn "Zadania do zrealizowania w dniu dzisiejszym"
@@ -344,7 +413,7 @@ setDzisiaj = do
 	putStr "Podaj date dzisiejsza (TEST) (YYYY-MM-DD): "
 	dataDzisStr <- getLine
 	if czyData dataDzisStr then do
-		dzisiaj = (read dataDzisStr) :: Day
+		let dzisiaj = (read dataDzisStr) :: Day
 		putStrLn "Poprawnie ustalono date dzisiejsza"
 	else do
 		putStrLn "Wprowadzona data jest w zlym formacie"
