@@ -118,43 +118,39 @@ czyData :: String -> Bool
 czyData "" = False
 czyData date = 
 	if ((length date) /= 10) then
-	False
+		False
 	else
-	sprawdzDateString date (length date)
+	--sprawdzDateString date (length date)
+		sprawdzDateString date
 
--- funkcja pomocnicza do sprawdzenia daty
-sprawdzDateString :: String -> Int -> Bool
-sprawdzDateString [x] 1
-	| isDigit x == True = True
-	| otherwise = False
-sprawdzDateString (x:xs) ind
-	| (ind == 5) && isDigit x == True && x >= '0' && x <= '1' = sprawdzDateString xs (ind-1)
-	| (ind == 2) && isDigit x == True && x >= '0' && x <= '3' = sprawdzDateString xs (ind-1)
-	| (ind == 3 || ind == 6) && (x == '-') = sprawdzDateString xs (ind-1)
-	| (ind == 3 || ind == 6) && (x /= '-') = False
-	| (ind /= 5 && ind /= 2) && isDigit x == True = sprawdzDateString xs (ind-1)
-	| otherwise = False
+sprawdzDateString :: String -> Bool
+sprawdzDateString (y1:y2:y3:y4:a:m1:m2:b:d1:d2:r) =
+	if ((isDigit y1) && (isDigit y2) && (isDigit y3) && (isDigit y4) && a=='-' && m1=='0' && (isDigit m2) && b=='-' && d1>='0' && d1<='2' && (isDigit d2) && r==[])
+		then True
+	else if ((isDigit y1) && (isDigit y2) && (isDigit y3) && (isDigit y4) && a=='-' && m1=='1' && m2>='0' && m2<='2' && b=='-' && d1>='0' && d1<='2' && (isDigit d2) && r==[])
+		then True
+	else if ((isDigit y1) && (isDigit y2) && (isDigit y3) && (isDigit y4) && a=='-' && m1=='0' && (isDigit m2) && b=='-' && d1=='3' && d2>='0' && d2<='1' && r==[])
+		then True
+	else if ((isDigit y1) && (isDigit y2) && (isDigit y3) && (isDigit y4) && a=='-' && m1=='1' && m2>='0' && m2<='2' && b=='-' && d1=='3' && d2>='0' && d2<='1' && r==[])
+		then True
+	else False
 
 czyGodzina :: String -> Bool
 czyGodzina "" = False
 czyGodzina time =
 	if ((length time) /= 5) then
-	False
+		False
 	else
-	sprawdzGodzineString time (length time)
+		sprawdzGodzineString time
 
--- sprawdzanie godziny
-sprawdzGodzineString :: String -> Int -> Bool
-sprawdzGodzineString [x] 1
-	| isDigit x == True && x >= '0' && x <= '9' = True
-	| otherwise = False
-sprawdzGodzineString (x:xs) ind
-	| (ind == 5) && isDigit x == True && x >= '0' && x <= '2' = sprawdzGodzineString xs (ind-1)
-	| (ind == 4) && isDigit x == True = sprawdzGodzineString xs (ind-1)
-	| (ind == 3) && (x == ':') = sprawdzGodzineString xs (ind-1)
-	| (ind == 3) && (x /= ':') = False
-	| (ind == 2) && isDigit x == True  && x >= '0' && x <= '5' = sprawdzGodzineString xs (ind-1)
-	| otherwise = False
+sprawdzGodzineString :: String -> Bool
+sprawdzGodzineString (a:b:c:d:e:f) = 
+	if (a>='0' && a<='1' && (isDigit b) && c==':' && d>='0' && d<='5' && (isDigit e) && f==[]) 
+		then True
+	else if (a=='2' && b>='0' && b<='3' && c==':' && d>='0' && d<='5' && (isDigit e) && f==[])
+		then True
+	 else False
+
 
 -- sprawdzanie, czy napis jest liczba
 czyLiczba :: String -> Bool
