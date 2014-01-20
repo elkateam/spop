@@ -279,13 +279,13 @@ pozostawPrzeszleWydarzenia (x:xs) dzis
 --uruchomienie programu
 main = do
 	utworzPlikWydarzen 
-	let a = "test"
-	menuLoop
+	menuLoop dzisiaj
 
 -- Menu glowne - pokazuje ogolne opcje programu.
-menuLoop :: IO()
-menuLoop = do 
+menuLoop :: Day -> IO()
+menuLoop dzis = do 
 	putStrLn "***** P R Z Y P O M N I E N I A *****"
+	putStrLn ("Dzisiejsza data: " ++ show (dzis) ++ "\n")
 	putStrLn "Menu glowne"
 	putStrLn "1  Utworz zadanie"
 	putStrLn "2  Zarzadzanie zadaniami"
@@ -295,15 +295,14 @@ menuLoop = do
 	case cmd of
 		"1" -> do 
 			utworzZadanie
-			menuLoop
-		"2" -> do przegladajZadania
+			menuLoop dzis
+		"2" -> do przegladajZadania dzis
 		"3" -> do 
 			setDzisiaj
-			menuLoop
 		"0" -> do putStrLn "Koniec."
 		_ -> do
 			putStrLn "Nieprawidlowy wybor"
-			menuLoop
+			menuLoop dzis
 
 -- Dodawanie zadania
 utworzZadanie = do
@@ -347,7 +346,8 @@ utworzZadanie = do
 	
 
 -- Przegl¹danie zadañ
-przegladajZadania = do
+przegladajZadania :: Day -> IO()
+przegladajZadania dzis = do
 	putStrLn "Przegladanie zadan"
 	putStrLn "1  Wszystkie zadania"
 	putStrLn "2  Zadania do zrealizowania w dniu dzisiejszym (niezrealizowane z przeszlosci oraz te z dzisiejsza data)"
@@ -358,26 +358,27 @@ przegladajZadania = do
 	cmd <- getLine
 	case cmd of
 		"1" -> do 
-			wszystkieZadania
+			wszystkieZadania dzis
 		"2" -> do 
-			zadaniaDzis
-			przegladajZadania
+			zadaniaDzis dzis
+			--przegladajZadania dzis
 		"3" -> do 
 			zrealizowaneZadania
-			przegladajZadania
+			przegladajZadania dzis
 		"4" -> do
 			usunWszystkieZrealizowane
-			przegladajZadania
+			przegladajZadania dzis
 		"5" -> do
-			usunWszystkieZaplanowane
-			przegladajZadania
-		"0" -> do menuLoop
+			usunWszystkieZaplanowane dzis
+			przegladajZadania dzis
+		"0" -> do menuLoop dzis
 		_ -> do
 			putStrLn "Nieprawidlowy wybor"
-			przegladajZadania
+			przegladajZadania dzis
 			
 -- Wyœwietlanie wszystkich zadañ
-wszystkieZadania = do
+wszystkieZadania :: Day -> IO()
+wszystkieZadania dzis = do
 	putStrLn "Wszystkie zadania: "
 	zadania <- wczytajPlik
 	putStrLn (zadaniaNapis zadania)
@@ -388,15 +389,15 @@ wszystkieZadania = do
 	case cmd of
 		"1" -> do 
 			usunWydarzenie
-			wszystkieZadania
+			wszystkieZadania dzis
 		"2" -> do 
 			realizujWydarzenie
-			wszystkieZadania
+			wszystkieZadania dzis
 		"0" -> do
-			przegladajZadania
+			przegladajZadania dzis
 		_ -> do
 			putStrLn "Nieprawidlowy wybor"
-			wszystkieZadania
+			wszystkieZadania dzis
 	
 usunWydarzenie = do
 	zadania <- wczytajPlik
@@ -423,12 +424,12 @@ realizujWydarzenie = do
 		putStrLn "Niepoprawny numer zadania"	
 	
 -- Wyœwietlanie zadañ do zrealizowania dzisiaj
-zadaniaDzis = do
+zadaniaDzis :: Day -> IO()
+zadaniaDzis dzis = do
 	putStrLn "Zadania do zrealizowania w dniu dzisiejszym"
-	--let dzisiaj = getCurrentDay :: Day
-	putStrLn ("Dzisiejsza data: " ++ show (dzisiaj) ++ "\n")
+	putStrLn ("Dzisiejsza data: " ++ show (dzis) ++ "\n")
 	wydarzenia <- wczytajPlik
-	putStrLn (getCurrentWydarzenia wydarzenia dzisiaj)
+	putStrLn (getCurrentWydarzenia wydarzenia dzis)
 	putStrLn "1  Usun zadanie"
 	putStrLn "2  Oznacz zadanie jako zrealizowane"
 	putStrLn "0  Powrot"
@@ -436,15 +437,15 @@ zadaniaDzis = do
 	case cmd of
 		"1" -> do 
 			usunWydarzenie
-			zadaniaDzis
+			zadaniaDzis dzis
 		"2" -> do 
 			realizujWydarzenie
-			zadaniaDzis
+			zadaniaDzis dzis
 		"0" -> do
-			wszystkieZadania
+			przegladajZadania dzis
 		_ -> do
 			putStrLn "Nieprawidlowy wybor"
-			zadaniaDzis
+			zadaniaDzis dzis
 			
 
 -- Wyœwietlanie zadañ zrealizowanych
@@ -459,19 +460,23 @@ usunWszystkieZrealizowane = do
 	zapiszWydarzenia (pozostawNieZrealizowaneWydarzenia wydarzenia)
 	putStrLn "Poprawnie usunieto!\n"
 
-usunWszystkieZaplanowane = do
+usunWszystkieZaplanowane :: Day -> IO()
+usunWszystkieZaplanowane dzis = do
 	putStrLn "Usuwanie wszystkich zadan zaplanowanych\n"
 	wydarzenia <- wczytajPlik
-	zapiszWydarzenia (pozostawPrzeszleWydarzenia wydarzenia dzisiaj)
+	zapiszWydarzenia (pozostawPrzeszleWydarzenia wydarzenia dzis)
 	putStrLn "Poprawnie usunieto!\n"
 	
 setDzisiaj = do
-	putStr "Podaj date dzisiejsza (TEST) (YYYY-MM-DD): "
+	putStr "Podaj date dzisiejsza (do testow) (YYYY-MM-DD): "
 	dataDzisStr <- getLine
 	if czyData dataDzisStr then do
-		let dzisiaj = (read dataDzisStr) :: Day
+		let dzisNowy = (read dataDzisStr) :: Day
 		putStrLn "Poprawnie ustalono date dzisiejsza"
+		putStrLn "Uruchomienie programu z nowa data na dzis (w celach testowych)\n"
+		menuLoop dzisNowy
 	else do
-		putStrLn "Wprowadzona data jest w zlym formacie"
+		putStrLn "Wprowadzona data jest w zlym formacie\n"
+		menuLoop dzisiaj
 
 
